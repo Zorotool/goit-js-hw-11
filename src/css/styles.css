@@ -12,22 +12,10 @@ body {
   line-height: 1.5;
 }
 
-#search-box {
-  font: inherit;
-  padding: 8px;
-  max-width: 320px;
-  margin-bottom: 16px;
-}
-
-
-  .country-list__item {
-
+.search-request {
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 15px;
-}
-
-.country-card__item {
-  list-style: none;
-  padding: 40px;
+  height: 40px;
+  background-color: rgb(20, 37, 134);
 }
