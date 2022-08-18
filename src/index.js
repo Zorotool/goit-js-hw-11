@@ -1,91 +1,87 @@
-import './css/styles.css';
-import debounce from 'lodash.debounce';
-import { Notify } from 'notiflix/build/notiflix-notify-aio';
-// Описан в документации
-import SimpleLightbox from "simplelightbox";
-// Дополнительный импорт стилей
-import "simplelightbox/dist/simple-lightbox.min.css";
 
+import './css/styles.css'
+import { fetchImages } from './js/fetch-images'
+import { renderGallery } from './js/render-gallery'
+import { onScroll, onToTopBtn } from './js/scroll'
+import Notiflix from 'notiflix'
+import SimpleLightbox from 'simplelightbox'
+import 'simplelightbox/dist/simple-lightbox.min.css'
 
-const searchForm = document.querySelector('.search-form');
-const searchBtn = document.querySelector('search-btn')    
- 
+const searchForm = document.querySelector('#search-form')
+const gallery = document.querySelector('.gallery')
+const loadMoreBtn = document.querySelector('.btn-load-more')
+let query = ''
+let page = 1
+let simpleLightBox
+const perPage = 40
 
-searchBtn.addEventListener('submit', () => {
- 
-    console.log(evt.target)
-})
+searchForm.addEventListener('submit', onSearchForm)
+loadMoreBtn.addEventListener('click', onLoadMoreBtn)
 
+onScroll()
+onToTopBtn()
 
+function onSearchForm(e) {
+  e.preventDefault()
+  window.scrollTo({ top: 0 })
+  page = 1
+  query = e.currentTarget.searchQuery.value.trim()
+  gallery.innerHTML = ''
+  loadMoreBtn.classList.add('is-hidden')
 
-// console.dir(searchForm);
+  if (query === '') {
+    alertNoEmptySearch()
+    return
+  }
 
+  fetchImages(query, page, perPage)
+    .then(({ data }) => {
+      if (data.totalHits === 0) {
+        alertNoImagesFound()
+      } else {
+        renderGallery(data.hits)
+        simpleLightBox = new SimpleLightbox('.gallery a').refresh()
+        alertImagesFound(data)
 
+        if (data.totalHits > perPage) {
+          loadMoreBtn.classList.remove('is-hidden')
+        }
+      }
+    })
+    .catch(error => console.log(error))
+}
 
+function onLoadMoreBtn() {
+  page += 1
+  simpleLightBox.destroy()
 
+  fetchImages(query, page, perPage)
+    .then(({ data }) => {
+      renderGallery(data.hits)
+      simpleLightBox = new SimpleLightbox('.gallery a').refresh()
 
+      const totalPages = Math.ceil(data.totalHits / perPage)
 
+      if (page > totalPages) {
+        loadMoreBtn.classList.add('is-hidden')
+        alertEndOfSearch()
+      }
+    })
+    .catch(error => console.log(error))
+}
 
+function alertImagesFound(data) {
+  Notiflix.Notify.success(`Hooray! We found ${data.totalHits} images.`)
+}
 
+function alertNoEmptySearch() {
+  Notiflix.Notify.failure('The search string cannot be empty. Please specify your search query.')
+}
 
-// const onInput = document.querySelector('input');
-// const countryList = document.querySelector('.country-list');
-// const countryCard = document.querySelector('.country-info');
+function alertNoImagesFound() {
+  Notiflix.Notify.failure('Sorry, there are no images matching your search query. Please try again.')
+}
 
-// onInput.addEventListener('input', debounce(countryInput, DEBOUNCE_DELAY))
-
-// function countryInput() {
-//     const searchCoutriesResult = onInput.value.trim();
-//     if (searchCoutriesResult === '') {
-//     return (countryList.innerHTML = ''), (countryCard.innerHTML = '');
-//   }
-   
-//     fetchCountries(searchCoutriesResult)
-//         .then(data => {
-//             countryList.innerHTML = '';
-//             countryCard.innerHTML = '';
-//             if (data.length === 1) { countryCard.insertAdjacentHTML('beforeend', renderCountryCard(data))}
-//             else if (data.length > 10){notifyInfo()}
-//             else if (data.length > 1 && data.length <= 10) { countryList.insertAdjacentHTML('beforeend', renderCountryList(data)) }
-//         })
-//     .catch(error => notifyFailure());
-//     }
-      
-// function renderCountryList(data) {
-//     const markup = data
-//         .map(({ name, flags }) => {
-//             return `
-//             <li class="country-list__item list">
-//                 <img class="country-list__flag" src="${flags.svg}" alt="Flag of ${name.official}" width = 35 height = 35px>
-//                 <h2 class="country-list__name">${name.official}</h2>
-//             </li>
-//             `;
-//         }).join('');
-//     return markup;
-// }
-
-// function renderCountryCard(data) {
-//     const markup = data
-//         .map(({ name, flags, capital, population, languages }) => {
-//             return `
-//             <li class="country-card__item list">
-//                 <img class="country-list__flag" src="${flags.svg}" alt="Flag of ${name.common}" width = 100>
-//                 <h2 class="country-list__name">${name.common}</h2>
-//                 <p>Capital: ${capital}</p>
-//                 <p>Population: ${population}</p>
-//                 <p>Languages: ${Object.values(languages).join(', ')}</p>
-//             </li>
-//             `;
-//         }).join('');
-//     return markup;
-// }
-
-// function notifyInfo() {
-//     Notify.info('Too many matches found. Please enter a more specific name.')
-// }
-
-// function notifyFailure() {
-//     Notify.failure('QOops, there is no country with that name')
-// }
-
-
+function alertEndOfSearch() {
+  Notiflix.Notify.failure("We're sorry, but you've reached the end of search results.")
+}
